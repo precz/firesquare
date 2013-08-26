@@ -103,6 +103,7 @@ define([
       'search':   'search',
       'login':    'login',
       'logging':  'logging',
+      'explore':  'explore',
       '*actions': 'default'
     },
 
@@ -147,6 +148,18 @@ define([
       _before(function() {
         _loadDrawer();
         return new SearchVenue();
+      });
+    },
+
+    /**
+      `explore` route method.
+
+      @method search
+    */
+    explore: function() {
+      _before(function() {
+        _loadDrawer();
+        return new SearchVenue({type: 'explore'});
       });
     },
 

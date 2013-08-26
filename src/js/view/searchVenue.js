@@ -3,21 +3,15 @@ define([
   'text!template/searchVenueItem.html',
   'model/service',
   'model/venue',
-  'model/currentUser',
+  'model/position',
   'view/venue',
   'view/drawer'
-], function(template, itemTemplate, Service, VenueModel, CurrentUser, VenueView, Drawer) {
+], function(template, itemTemplate, Service, VenueModel, Position, VenueView, Drawer) {
   'use strict';
 
   var _drawer,
-    //TODO: position should not be static variable.
-    _position = {
-      gps: null,
-      checkin: null,
-      service: null
-    },
     _search,
-    _positionWatch;
+    _model;
 
   /**
     Method opens venue after user click.
@@ -47,9 +41,12 @@ define([
     @static
     @private
   */
-  function _updateSearch() {
+  function _updateSearch(type) {
 
-    var input = $('input');
+    var input = $('input'),
+      gps = _model.get('gps'),
+      checkin = _model.get('checkin'),
+      service = _model.get('service');
 
     function _callback(data) {
       $('ul.venues').empty();
@@ -60,7 +57,11 @@ define([
         _data = data;
       }
       $(_data.response.groups[0].items).each(function() {
-        $('ul.venues').append(_.template(itemTemplate, this));
+        if (type === 'search') {
+          $('ul.venues').append(_.template(itemTemplate, this));
+        } else {
+          $('ul.venues').append(_.template(itemTemplate, this.venue));
+        }
       });
       $('ul.venues > li').on('click', _itemClick);
     }
@@ -75,118 +76,55 @@ define([
         _search.abort();
       }
       _search = $.get(
-        'https://api.foursquare.com/v2/venues/search?ll=' + position.latitude + ',' + position.longitude + '&oauth_token=' + Service.foursquare.get('access_token') + '&query=' + $('input').val(),
+        'https://api.foursquare.com/v2/venues/' + type
+          + '?ll=' + position.latitude + ',' + position.longitude
+          + '&oauth_token=' + Service.foursquare.get('access_token')
+          + '&query=' + $('input').val(),
         _callback
       );
     }
 
     //Check if we have any position.
-    if (((_position.gps !== null && _position.gps !== false) ||
-        _position.checkin !== null ||
-        _position.service !== null) &&
+    if (((gps !== null && gps !== false) ||
+        checkin !== null ||
+        service !== null) &&
         input.val() !== '') {
       _showProgress();
       //If we have a gps position.
-      if (_position.gps !== null && _position.gps !== false) {
-        _getSearch(_position.gps);
-      } else if (_position.checkin !== null &&
-          _position.service !== null) {
+      if (gps !== null && gps !== false) {
+        _getSearch(gps);
+      } else if (checkin !== null &&
+          service !== null) {
         //If we have both checkin and service. Service country should be right.
-        if (_position.checkin.country !== _position.service.country_name) {
-          _getSearch(_position.service);
+        if (checkin.country !== service.country_name) {
+          _getSearch(service);
         } else {
-          _getSearch(_position.checkin);
+          _getSearch(checkin);
         }
-      } else if (_position.checkin !== null) {
-        _getSearch(_position.checkin);
+      } else if (checkin !== null) {
+        _getSearch(checkin);
       } else {
-        _getSearch(_position.service);
+        _getSearch(service);
       }
     }
   }
 
   /**
-    Method actualize current user position using GPS.
+    Method is called when GPS status changes and icon is refreshed.
 
-    @method _getGPS
+    @method _updateGPSStatus
     @for SearchVenue
+    @param {Object} event object.
     @static
     @private
   */
-  function _getGPS() {
-    function _success(position) {
-      _position.gps = position.coords;
+  function _updateGPSStatus() {
+    var status = _model.get('gps');
+
+    if (status !== null &&
+        status !== false) {
       $('body > section > header > menu > a .icon').removeClass('waiting');
-      _updateSearch();
-      //We don't need to watch position all the time after we fetch one.
-      window.navigator.geolocation.clearWatch(_positionWatch);
     }
-
-    function _error() {
-      _position.gps = false;
-    }
-
-    if (window.navigator.geolocation !== undefined) {
-      _positionWatch = window.navigator.geolocation.watchPosition(_success, _error);
-    }
-  }
-
-  /**
-    Method fetch current user position from last checkin.
-
-    @method _getGPS
-    @for SearchVenue
-    @static
-    @private
-  */
-  function _getCheckin() {
-
-    function _callback() {
-      var venue;
-
-      if (CurrentUser.get('checkins').items.length > 0) {
-        venue = CurrentUser.get('checkins').items[0].venue;
-        _position.checkin = venue.location;
-        _position.checkin.latitude = venue.location.lat;
-        _position.checkin.longitude = venue.location.lng;
-        _updateSearch();
-      }
-    }
-
-    //If we fail to reset model state, use last avaliable checkin.
-    CurrentUser.fetch({
-      success: _callback,
-      error: _callback
-    });
-  }
-
-  /**
-    Method fetch current user position from freegeoip.net service.
-
-    @method _getGPS
-    @for SearchVenue
-    @static
-    @private
-  */
-  function _getService() {
-
-    function _callback(data) {
-      var dataJson;
-
-      if (typeof data === 'string') {
-        dataJson = JSON.parse(data);
-      } else {
-        dataJson = data;
-      }
-
-      _position.service = dataJson;
-      _updateSearch();
-    }
-
-    $.get(
-      'http://freegeoip.net/json/',
-      _callback
-    );
   }
 
   /**
@@ -200,9 +138,9 @@ define([
   function _remove() {
     $('input').off('keyup', _updateSearch);
     $('ul.venues > li').off('click', _itemClick);
-    if (_positionWatch !== undefined) {
-      window.navigator.geolocation.clearWatch(_positionWatch);
-    }
+    _model.off('change', _updateSearch);
+    _model.off('change:gps', _updateGPSStatus);
+    _model.destroy();
     $('body > section > header > menu').remove();
   }
 
@@ -219,9 +157,12 @@ define([
     if (event !== undefined) {
       event.preventDefault();
     }
-    if (_position.gps === null) {
+
+    var position = _model.get('gps');
+
+    if (position === null) {
       _drawer.showStatus('Still waiting for <strong>GPS</strong> signal. You can try to search anyway.');
-    } else if (_position.gps === false) {
+    } else if (position === false) {
       _drawer.showStatus('<strong>GPS</strong> device is unavailable');
     } else {
       _drawer.showStatus('Now we have your <strong>GPS</strong> position!');
@@ -237,21 +178,23 @@ define([
     @static
     @private
   */
-  function _initialize() {
+  function _initialize(type) {
 
     _drawer = new Drawer(_remove);
-    _drawer.setTitle('Search venue');
+
+    if (type === undefined) {
+      type = 'search';
+    }
+
+    _drawer.setTitle(type.charAt(0).toUpperCase() + type.slice(1) + ' venue');
 
     $('section header a').last().on('click', _drawer.removeWindow);
     $('section div[role="main"]').last().html(_.template(template));
-    $('input').on('keyup', _updateSearch);
-    //TODO: position should not be static variable!
-    _position.gps = null;
-    _position.service = null;
-    _position.checkin = null;
-    _getGPS();
-    _getCheckin();
-    _getService();
+    $('input').on('keyup', function() {_updateSearch(type); });
+    _model = new Position();
+    _model.initializee();
+    _model.on('change', function() {_updateSearch(type); });
+    _model.on('change:gps', _updateGPSStatus);
 
     $('body > section > header').prepend('<menu type="toolbar"><a href="#search"><span class="icon icon-gps-status waiting">GPS</span></a></menu>');
     $('body > section > header > menu > a .icon').on('click', _showGPSStatus);
@@ -272,7 +215,9 @@ define([
       @for SearchVenue
       @constructor
     */
-    initialize: _initialize,
+    initialize: function() {
+      _initialize(this.options.type);
+    },
     /**
       Method points to {{#crossLink "SearchVenue/_remove"}}{{/crossLink}} method.
 
