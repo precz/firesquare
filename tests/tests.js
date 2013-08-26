@@ -17,7 +17,7 @@ require([
   'tests/model/checkin',
   'tests/model/user',
   'tests/model/venue',
-  'tests/model/position',
+  'tests/model/position'
 ], function () {
   'use strict';
 
