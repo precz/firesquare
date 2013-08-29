@@ -12,7 +12,9 @@ define([
     _drawer,
     _unloadView,
     _windowStack = [],
-    _removeAllWindow;
+    _removeAllWindow,
+    _drawerEvent,
+    _drawerElement = null;
 
   /**
     Method is called when Drawer object is initialized, but DOM drawer is initialized only once.
@@ -29,6 +31,14 @@ define([
       _isLoaded = true;
       $('body').html(_.template(template, CurrentUser));
       $('body > section > header > a').on('click', _drawer);
+
+      document.body.innerHTML = '';
+      document.body.insertAdjacentHTML(
+        'afterbegin',
+        _.template(template, CurrentUser)
+      );
+      _drawerElement = document.getElementById('drawer-activator');
+      _drawerElement.addEventListener('click', _drawerEvent);
     }
 
     _unloadView(remove, update);
@@ -79,6 +89,20 @@ define([
   };
 
   /**
+    Method keeps user `drawer` event.
+
+    @method _drawerEvent
+    @for Drawer
+    @param {event} function is called by user action.
+    @static
+    @private
+  */
+  _drawerEvent = function(event) {
+    event.preventDefault();
+    _drawer();
+  };
+
+  /**
     Method removes all windows, views from DOM, unloads events.
 
     @method _remove
@@ -91,7 +115,7 @@ define([
       _isLoaded = false;
       _removeAllWindow();
       _unloadView();
-      $('body > section > header > a').off('click', _drawer);
+      _drawerElement.removeEventListener('click', _drawerEvent);
     }
   }
 
@@ -204,7 +228,10 @@ define([
       timeout = 2000;
     }
 
-    $('body').append(_.template(statusTemplate, {message: message}));
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      _.template(statusTemplate, {message: message})
+    );
     window.setTimeout(function() {
       $('section[role="status"]').first().remove();
     }, timeout);

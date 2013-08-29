@@ -8,7 +8,9 @@ define([
     _initialize,
     _message,
     _exit,
-    _remove;
+    _remove,
+    _loginButton = null,
+    _exitButton = null;
 
   /**
     Method is called when user clicks on `Login` button. Foursquare oauth window is open.
@@ -44,7 +46,7 @@ define([
     @private
   */
   _message = function (event) {
-    var access_token = event.originalEvent.data.access_token;
+    var access_token = event.data.access_token;
 
     if (access_token !== undefined) {
       service.foursquare.set('access_token', access_token);
@@ -63,10 +65,12 @@ define([
     @private
   */
   _initialize = function () {
-    $('body').html(_.template(template));
-    $(window).on('message', _message);
-    $('.login').on('click', _login);
-    $('.exit').on('click', _exit);
+    document.body.innerHTML = _.template(template, {});
+    _loginButton = document.getElementById('login-button');
+    _exitButton = document.getElementById('exit-button');
+    window.addEventListener('message', _message);
+    _loginButton.addEventListener('click', _login);
+    _exitButton.addEventListener('click', _exit);
   };
 
   /**
@@ -78,9 +82,11 @@ define([
     @private
   */
   _remove = function () {
-    $('.login').on('click', _login);
-    $('.exit').on('click', _exit);
-    $(window).off('message', _message);
+    _loginButton.removeEventListener('click', _login);
+    _exitButton.removeEventListener('click', _exit);
+    window.removeEventListener('message', _message);
+    _loginButton = null;
+    _exitButton = null;
   };
 
   /**

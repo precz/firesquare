@@ -14,7 +14,8 @@ define([
     _fetch,
     _remove,
     _add,
-    _update;
+    _update,
+    _recentCheckinElement = null;
 
   function _searchVenue(event) {
     event.preventDefault();
@@ -32,7 +33,8 @@ define([
     @private
   */
   function _show(collection) {
-    _drawer.setContent(_.template(template));
+    _drawer.setContent(_.template(template, {}));
+    _recentCheckinElement = document.getElementById('recent-checkins-list');
     collection.each(function(checkin) {
       _add(checkin);
     });
@@ -115,7 +117,7 @@ define([
 
     return new Venue(
       new VenueModel(
-        _recent.get($(element.currentTarget).attr('id')).get('venue')
+        _recent.get(element.currentTarget.id).get('venue')
       ),
       _drawer
     );
@@ -131,24 +133,26 @@ define([
     @private
   */
   _add = function (checkin) {
+    var i,
+      length = _recentCheckinElement.childNodes.length,
+      current = null,
+      addedElement = null;
 
-    //check before each element should be put new element.
-    $('.recent li').each(function() {
-      if ($('.recent li[created-at="' + parseInt(checkin.get('createdAt'), 10) + '"]').get(0) === undefined &&
-          parseInt($(this).attr('created-at'), 10) < parseInt(checkin.get('createdAt'), 10)) {
-        $(this).before(_.template(checkinTemplate, checkin));
-        return;
+    for (i = 0; i < length; i += 1) {
+      current = _recentCheckinElement.childNodes[i]; //Get current element
+      if (current.dataset.createdAt < parseInt(checkin.get('createdAt'), 10)) { //If checkin was earlier, than current element
+        current.insertAdjacentHTML('beforebegin', _.template(checkinTemplate, checkin)); // Add this checkin before current element
+        addedElement = current.previousSibling; //Acquire added element
+        break; //Break the loop
       }
-    });
-
-    //if element is not yet in DOM it should be put at the end of the list
-    if ($('.recent li[created-at="' + parseInt(checkin.get('createdAt'), 10) + '"]').get(0) === undefined) {
-      $('.recent').append(_.template(checkinTemplate, checkin));
+    }
+    if (null === addedElement) {
+      _recentCheckinElement.insertAdjacentHTML('beforeend', _.template(checkinTemplate, checkin));
+      addedElement = _recentCheckinElement.lastChild; //We inserted html, it should become lastChild
     }
 
     //Add on click event
-    $('.recent li').off('click', _showVenue);
-    $('.recent li').on('click', _showVenue);
+    addedElement.addEventListener('click', _showVenue);
   };
 
   /**
@@ -160,6 +164,10 @@ define([
     @private
   */
   _remove = function () {
+    var list,
+      listLenght,
+      i;
+
     if (_fetch !== undefined &&
         typeof (_fetch.abort) === 'function') {
       _fetch.abort();
@@ -167,7 +175,13 @@ define([
     _recent.off('add', _add);
     $('body > section > header > menu > a').off('click', _searchVenue);
     $('body > section > header > menu').remove();
-    $('.recent li').off('click', _showVenue);
+    //$('.recent li').off('click', _showVenue);
+    list = document.getElementById('recent-checkins-list').children;
+    listLenght = list.length;
+
+    for (i = 0; i < listLenght; i += 1) {
+      list[i].removeEventListener('click', _showVenue);
+    }
   };
 
   /**

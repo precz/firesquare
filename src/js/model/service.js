@@ -10,7 +10,7 @@ define([], function() {
     @static
   */
   var _foursquare = new Backbone.Model({
-    access_token = null;
+    access_token: null
   });
 
   /**

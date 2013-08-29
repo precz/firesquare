@@ -39,7 +39,14 @@ define([
       Backbone.history.navigate('/login', true);
     }
 
-    $('body').html(_.template(template, {message: 'Logging in ...', button1: undefined, button2: undefined}));
+    document.body.innerHTML = _.template(
+      template,
+      {
+        message: 'Logging in ...',
+        button1: undefined,
+        button2: undefined
+      }
+    );
     CurrentUser.auth(_success, _error);
   }
 
