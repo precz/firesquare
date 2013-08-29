@@ -9,7 +9,9 @@ define([], function() {
     @private
     @static
   */
-  var _foursquare = new Backbone.Model();
+  var _foursquare = new Backbone.Model({
+    access_token = null;
+  });
 
   /**
     This object contains public properties that ponts to static service models. Service models contails authentication details.

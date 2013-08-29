@@ -55,7 +55,7 @@ define([
       //user is authenticated - nothing to do here.
       callback();
     } else {
-      if (Service.foursquare.get('access_token') === undefined) {
+      if (Service.foursquare.get('access_token') === null) {
         // We don't have an access token so we need to log in first.
         Backbone.history.navigate('/login', true);
       } else {
@@ -73,7 +73,7 @@ define([
         if (!(_currentView instanceof Login) &&
             !(_currentView instanceof Logging)) {
           CurrentUser.set('isAuth', false);
-          Service.foursquare.set('access_token', undefined);
+          Service.foursquare.set('access_token', null);
           Backbone.history.navigate('/login', true);
         }
       }//,
