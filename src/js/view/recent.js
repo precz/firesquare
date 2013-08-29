@@ -134,21 +134,21 @@ define([
   */
   _add = function (checkin) {
     var i,
-      length = _recentCheckinElement.childNodes.length,
+      length = _recentCheckinElement.children.length,
       current = null,
       addedElement = null;
 
     for (i = 0; i < length; i += 1) {
-      current = _recentCheckinElement.childNodes[i]; //Get current element
+      current = _recentCheckinElement.children[i]; //Get current element
       if (current.dataset.createdAt < parseInt(checkin.get('createdAt'), 10)) { //If checkin was earlier, than current element
         current.insertAdjacentHTML('beforebegin', _.template(checkinTemplate, checkin)); // Add this checkin before current element
-        addedElement = current.previousSibling; //Acquire added element
+        addedElement = current.previousElementSibling; //Acquire added element
         break; //Break the loop
       }
     }
     if (null === addedElement) {
       _recentCheckinElement.insertAdjacentHTML('beforeend', _.template(checkinTemplate, checkin));
-      addedElement = _recentCheckinElement.lastChild; //We inserted html, it should become lastChild
+      addedElement = _recentCheckinElement.lastElementChild; //We inserted html, it should become lastChild
     }
 
     //Add on click event

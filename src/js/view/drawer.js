@@ -29,8 +29,6 @@ define([
   function _initialize(remove, update) {
     if (!_isLoaded) {
       _isLoaded = true;
-      $('body').html(_.template(template, CurrentUser));
-      $('body > section > header > a').on('click', _drawer);
 
       document.body.innerHTML = '';
       document.body.insertAdjacentHTML(
@@ -77,7 +75,6 @@ define([
     @private
   */
   _drawer = function(hide) {
-
     var region = document.querySelector("body > section");
 
     if (region.dataset.state === 'drawer') {
@@ -86,6 +83,11 @@ define([
       region.dataset.state = 'drawer';
     }
     return false;
+  };
+
+  _drawerEvent = function(event) {
+    event.preventDefault();
+    _drawer();
   };
 
   /**

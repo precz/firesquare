@@ -26,7 +26,7 @@ define([
 
     return new VenueView(
       new VenueModel(
-        {id: $(element.currentTarget).attr('id')}
+        {id: element.currentTarget.id}
       ),
       _drawer
     );
